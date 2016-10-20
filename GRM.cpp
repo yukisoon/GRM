@@ -2,69 +2,45 @@
 #include <stdlib.h>
 
 
-int idx[10] = { 0 };
 
-unsigned int power(const unsigned int& exponent)
+
+unsigned short power(const unsigned short& exponent)
 {
 	return (1 << exponent);
 }
 
-void grm(int& i, const int& m, const int& r, int p, const int& n, unsigned char** matrix)
+void grm(const short& n, const short& m, const short& lim, unsigned char** matrix, unsigned short& idx, short* row, short rowIdx, short& rowValue)
 {
-	if (r <= p)
+	if (lim <= rowIdx)
 	{
-		int z = 0;
-		while (z != p)
+		int i = 0;
+		printf("%d : ", idx);
+		while (i != rowIdx)
 		{
-			printf("%d ", idx[z]);
-			z++;
+			printf("%d ", row[i]);
+			for (int j = 0; j < n; j++)
+			{
+				matrix[idx][j] *= matrix[row[i]][j];
+			}
+			i++;
 		}
+		idx++;
 		printf("\n");
 		return;
 	}
 
-	for (int j = i + 1; j <= m; j++)
+	for (short i = rowValue - 1; i >= 1; i--)
 	{
-		idx[p] = j;		
-		grm(j, m, r, p + 1, n, matrix);
-	}
-
-}
-void generateMatrixMultiple(int& i, const int& m, const int& r, int p, const int& n, unsigned char** matrix, int& idx)
-{
-	if (r < p)
-	{
-		return;
-	}
-
-	for (int j = i + 1; j <= m; j++)
-	{
-		if (p == 2)
-		{
-			printf("%d %d %d\n", idx, i, j);
-			for (int k = 0; k < n; k++)
-			{
-				matrix[idx][k] = matrix[i][k] * matrix[j][k];
-			}
-		}
-		else
-		{
-			printf("%d %d %d\n", idx, idx - 1, j);
-			for (int k = 0; k < n; k++)
-			{
-				matrix[idx][k] = matrix[idx - 1][k] * matrix[j][k];
-			}
-		}
-		printf("\n\n");
-		idx = idx + 1;
-		generateMatrixMultiple(j, m, r, p + 1, n, matrix, idx);
+		row[rowIdx] = i;
+		grm(n, m, lim, matrix, idx, row, rowIdx + 1, i);
 	}
 
 }
 
-void generateMatrix(const int& r, const int& m, const int& n, unsigned char** matrix)
+
+void generateMatrix(const short& r, const short& m, const short& n, unsigned char** matrix)
 {
-	for (int i = 0; i <= n; i++)
+	for (int i = 0; i < n; i++)
 	{
 		matrix[0][i] = 1;
 	}
@@ -84,26 +60,42 @@ void generateMatrix(const int& r, const int& m, const int& n, unsigned char** ma
 		}
 	}
 
-	
-	for(int k=2; k<=r; k++)
+
+	for (int i = r; i > 1; i--)
 	{
-		for (int i = 1; i <= m; i++) //ÀÚ¸®¼ö
+		short* multiplRows = (short*)malloc(sizeof(short) * r);
+		for (short j = m; j >= 1; j--)
 		{
-			int p = 0;
-			idx[p] = i;
-			//generateMatrixMultiple(i, m, r, p, n, matrix, idx);
-			grm(i, m, k, p+1, n, matrix);
+			short rowIdx = 0;
+			static unsigned short idx = m + 1;
+			multiplRows[rowIdx] = j;
+			grm(n, m, i, matrix, idx, multiplRows, rowIdx + 1, j);
 		}
+		free(multiplRows);
 	}
 
+
+	/*for(int i = 2; i <= r; i++)
+	{
+		short* multiplRows = (short*)malloc(sizeof(int) * r);
+		for (int j = 1; j <= m; j++)
+		{
+			int rowIdx = 0;
+			static unsigned short idx = m + 1;
+			multiplRows[rowIdx] = j;
+			grm(n, m, i, matrix, idx, multiplRows, rowIdx + 1, j);
+		}	
+		free(multiplRows);
+	}*/
+	
 }
 
-unsigned int combination(unsigned int n, const unsigned int& k)
+unsigned short combination(unsigned short n, const unsigned short& k)
 {
 	if (k > n) return 0;
 
-	unsigned int result = 1;
-	for (unsigned int i = 1; i <= k; i++)
+	unsigned short result = 1;
+	for (unsigned short i = 1; i <= k; i++)
 	{
 		result *= n--;
 		result /= i;
@@ -112,13 +104,180 @@ unsigned int combination(unsigned int n, const unsigned int& k)
 	return result;
 }
 
+
+
+void idxCalculator(unsigned short *array, const short& arrayLen, unsigned short& arrayPointer, unsigned short *result, unsigned short& resultIdx, unsigned short& resultValue)
+{
+	if (arrayLen == arrayPointer)
+	{
+		arrayPointer--;
+		
+		result[resultIdx] = resultValue;
+		resultIdx++;
+		
+		return;
+	}
+
+	for (int i = 0; i < 2; i++)
+	{
+		unsigned short temp = power(array[arrayPointer]) * i;
+		resultValue += temp;
+
+		arrayPointer++;
+		idxCalculator(array, arrayLen, arrayPointer, result, resultIdx, resultValue);
+
+		resultValue -= temp;
+	}
+	arrayPointer--;
+}
+
+
+void SCalculate(unsigned short *row, const short& rowLength, unsigned short *S)
+{
+	unsigned short *rowCopy = (unsigned short *)malloc(sizeof(unsigned short) * rowLength);
+
+	for (int i = 0; i < rowLength; i++)
+	{
+		rowCopy[i] = row[i] - 1;
+	}
+
+	unsigned short SValue = 0;
+	unsigned short SIdx = 0;
+
+	unsigned short rowPointer = 0;
+	
+	idxCalculator(rowCopy, rowLength, rowPointer, S, SIdx, SValue);
+
+	free(rowCopy);
+
+}
+
+void ECalculate(unsigned short *row, const short& rowLength, const short& m, unsigned short *E)
+{
+
+	int k = 0;
+	for (int i = 0; i < m; i++)
+	{
+		int temp = 0;
+		for (int j = 0; j < rowLength; j++)
+		{
+			if (i == (row[j] - 1))
+			{
+				temp = 1;
+				break;
+			}
+		}
+
+		if (temp == 0)
+		{
+			E[k] = i;
+			k++;
+		}
+	}
+}
+
+void SCCalculate(unsigned short *row, const short& rowLength, unsigned short *SC)
+{
+	unsigned short SCValue = 0;
+	unsigned short SCIdx = 0;
+
+	unsigned short rowPointer = 0;
+
+	idxCalculator(row, rowLength, rowPointer, SC, SCIdx, SCValue);
+
+
+}
+
+void RMDecoding(const short& n, const short& m, const short& rowLength, unsigned short* row, short rowIdx, short& rowValue, unsigned short& idx)
+{
+	if (rowLength <= rowIdx)
+	{
+		int i = 0;
+		printf("%d : ", idx);
+		while (i != rowIdx)
+		{
+			printf("%d ", row[i]);
+			i++;
+		}
+		printf("\n");
+
+
+
+		/**/
+		unsigned short SLength = power(rowLength);
+		unsigned short *S = (unsigned short *)malloc(sizeof(unsigned short) * SLength);
+		SCalculate(row, rowLength, S);
+
+		/*for (int i = 0; i < SLength; i++)
+		{
+			printf("%d ", S[i]);
+		}
+		printf("\n");*/
+
+		unsigned short ELength = m - (rowLength);
+		unsigned short *E = (unsigned short *)malloc(sizeof(unsigned short) * ELength);
+		ECalculate(row, rowLength, m, E);
+
+		unsigned short SCLength = power(ELength);
+		unsigned short *SC = (unsigned short *)malloc(sizeof(unsigned short) * SCLength);
+		SCCalculate(E, ELength, SC);
+
+		/*for (int i = 0; i < SCLength; i++)
+		{
+			printf("%d ", SC[i]);
+		}
+		printf("\n");*/
+
+
+
+
+
+		free(SC);
+		free(E);
+		free(S);
+		/**/
+
+		idx++;
+		printf("\n");
+		return;
+	}
+
+	for (short i = rowValue - 1; i >= 1; i--)
+	{
+		row[rowIdx] = i;
+		RMDecoding(n, m, rowLength, row, rowIdx + 1, i, idx);
+	}
+
+}
+
+//void RMDecoder(unsigned char** GRM, const unsigned short& k, const unsigned short& n, unsigned char** c, unsigned char** msg, const unsigned short& r, const unsigned short& m)
+//{
+//
+//	for (int i = r; i >= 1; i--)
+//	{
+//		short* multiplRows = (short*)malloc(sizeof(int) * r);
+//		for (int j = m; j >= 1; j--)
+//		{
+//			int rowIdx = 0;
+//			multiplRows[rowIdx] = j;
+//			RMDecoding(n, m, i, multiplRows, rowIdx + 1, j, idx);
+//		}
+//		free(multiplRows);
+//	}
+//
+//}
+
+
+
+
+
 void main()
 {
-	unsigned int r = 3; //4;
-	unsigned int m = 4; //10;
+	unsigned short r = 2; //4;
+	unsigned short m = 4; //10;
 
-	unsigned int n = 0; //code length
-	unsigned int k = 0; //message length	
+	unsigned short n = 0; //code length
+	unsigned short k = 0; //message length	
 
 	n = power(m);
 	for (int i = 0; i <= r; i++)
@@ -155,5 +314,32 @@ void main()
 		printf("\n");
 	}
 	printf("\n"); printf("\n");
+
+
+
+	for (int i = r; i >= 2; i--)
+	{
+		unsigned short* multiplRows = (unsigned short*)malloc(sizeof(unsigned short) * r);
+		for (short j = m; j >= 1; j--)
+		{
+			short rowIdx = 0;
+			static unsigned short idx = m + 1;
+			multiplRows[rowIdx] = j;
+			RMDecoding(n, m, i, multiplRows, rowIdx + 1, j, idx);
+		}
+		free(multiplRows);
+	}
+
+
+	
+
+
+	for (int i = 0; i < k; i++)
+	{
+		free(G[i]);
+	}
+
+	free(G);
+
 	return;
 }
